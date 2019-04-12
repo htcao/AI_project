@@ -7,6 +7,7 @@ import cv2 as cv
 # filename = "PPMI_3101_MR_Axial_PD-T2_TSE_FS_br_raw_20141027100405111_74_S234691_I449541.dcm"
 # folder = './PPMI/3101/Axial_PD-T2_TSE_FS/2014-08-20_10_57_57.0/S234691'
 # ds = pydicom.dcmread(os.path.join(folder, filename))  # plan dataset
+# print(ds)
 # a = ds.pixel_array
 # a = a/np.amax(a)*255
 # # a = cv.resize(a, (224, 224), interpolation = cv.INTER_AREA)

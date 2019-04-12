@@ -5,54 +5,55 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import time
+import torch.utils.model_zoo as model_zoo
 
 import math
 from collections import OrderedDict
 
 
-class VGG(nn.Module):
-    # You will implement a simple version of vgg11 (https://arxiv.org/pdf/1409.1556.pdf)
+class Alexnet(nn.Module):
     # Since the shape of image in CIFAR10 is 32x32x3, much smaller than 224x224x3, 
     # the number of channels and hidden units are decreased compared to the architecture in paper
     def __init__(self):
-        super(VGG, self).__init__()
+        super(Alexnet, self).__init__()
         self.conv = nn.Sequential(
             # Stage 1
-            nn.Conv2d(3, 8, 11, stride=4),
-            nn.BatchNorm2d(8),
+            nn.Conv2d(3, 96, 11, stride=4),
+            nn.BatchNorm2d(96),
             nn.ReLU(),
-            nn.MaxPool2d(2, stride=2),
+            nn.MaxPool2d(3, stride=2),
             # Stage 2
-            nn.Conv2d(8, 16, 5, stride=1),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(96, 256, 5, stride=1, padding=2),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.MaxPool2d(2, stride=2),
+            nn.MaxPool2d(3, stride=2),
             # Stage 3
-            nn.Conv2d(16, 32, 3, stride=1),
+            nn.Conv2d(256, 384, 3, stride=1, padding=1),
             nn.ReLU(),
             # Stage 4
-            nn.Conv2d(32, 64, 3, stride=1),
+            nn.Conv2d(384, 384, 3, stride=1, padding=1),
             nn.ReLU(),
             # Stage 5
-            nn.Conv2d(64, 64, 3, stride=1),
+            nn.Conv2d(384, 256, 3, stride=1, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2, stride=2)
+            nn.MaxPool2d(3, stride=2)
         )
         self.fc = nn.Sequential(
             # fully connected layers
             # parameters still needs to be changed
-            nn.Linear(64, 64),
+            nn.Linear(256*6*6, 4096),
             nn.ReLU(),
             nn.Dropout(p=0.5),
-            nn.Linear(64, 10),
+            nn.Linear(4096, 4096),
             nn.ReLU(),
             nn.Dropout(p=0.5),
-            nn.Linear()
+            nn.Linear(4096, 1),
+            nn.Sigmoid()
         )
 
     def forward(self, x):
         x = self.conv(x)
-        x = x.view(-1, 64)
+        x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
 
@@ -103,6 +104,10 @@ def test(testloader, net, device):
 def main():
     #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     device = torch.device('cpu')
+    model_urls = {
+        'alexnet': 'https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth',
+    }
+    pretrained = True
     transform = transforms.Compose(
         [transforms.ToTensor(),
          transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -116,7 +121,9 @@ def main():
                                        download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=100,
                                          shuffle=False)
-    net = VGG().to(device)
+    net = Alexnet().to(device)
+    if pretrained:
+        net.load_state_dict(model_zoo.load_url(model_urls['alexnet']))
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(net.parameters(), lr=0.001)
 
