@@ -20,7 +20,7 @@ class Alexnet(nn.Module):
         super(Alexnet, self).__init__()
         self.conv = nn.Sequential(
             # Stage 1
-            nn.Conv2d(10, 96, 11, stride=4),
+            nn.Conv2d(3, 96, 11, stride=4),
             nn.BatchNorm2d(96),
             nn.ReLU(),
             nn.MaxPool2d(3, stride=2),
@@ -49,8 +49,7 @@ class Alexnet(nn.Module):
             nn.Linear(4096, 4096),
             nn.ReLU(),
             nn.Dropout(p=0.5),
-            nn.Linear(4096, 1),
-            nn.Sigmoid()
+            nn.Linear(4096, 1)
         )
 
     def forward(self, x):
@@ -66,7 +65,7 @@ def train(trainloader, net, criterion, optimizer, device):
         running_loss = 0.0
         for i, (images, labels) in enumerate(trainloader):
             images = images.to(device)
-            labels = labels.to(device)
+            labels = labels.view(-1, 1).to(device)
             # TODO: zero the parameter gradients
             # TODO: forward pass
             # TODO: backward pass
@@ -94,9 +93,9 @@ def test(testloader, net, device):
         for data in testloader:
             images, labels = data
             images = images.to(device)
-            labels = labels.to(device)
+            labels = labels.view(-1, 1).to(device)
             outputs = net(images)
-            _, predicted = torch.max(outputs.data, 1)
+            predicted = (outputs.data > 0).float()
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     print('Accuracy of the network on the 10000 test images: %d %%' % (
@@ -104,28 +103,48 @@ def test(testloader, net, device):
 
 
 def main():
-    #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    device = torch.device('cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#    device = torch.device('cpu')
     model_urls = {
         'alexnet': 'https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth',
     }
     pretrained = False
-    data = np.load('data.npy')
-    data = torch.from_numpy(data.astype(float)).float()
-    y = torch.zeros(data.size(0), dtype=torch.long)
-
-    trainset = data_utils.TensorDataset(data, y)
+    data_control = np.load('data.npy')
+    data_control = torch.from_numpy(data_control.astype(float)).float()
+    data_control = data_control[:, 4:7, :, :]
+    y_control = torch.zeros(data_control.size(0), dtype=torch.float)
+    data_control_train = data_control[0:int(data_control.size(0)*0.8)]
+    data_control_test =  data_control[int(data_control.size(0)*0.8):]
+    y_control_train = y_control[0:int(data_control.size(0)*0.8)]
+    y_control_test = y_control[int(data_control.size(0)*0.8):]
+    data_pd = np.load('PD_data.npy')
+    data_pd = torch.from_numpy(data_pd.astype(float)).float()
+    data_pd = data_pd[:, 4:7, :, :]
+    y_pd = torch.ones(data_pd.size(0), dtype=torch.float)
+    data_pd_train = data_pd[0:int(data_pd.size(0)*0.8)]
+    data_pd_test =  data_pd[int(data_pd.size(0)*0.8):]
+    y_pd_train = y_pd[0:int(data_pd.size(0)*0.8)]
+    y_pd_test = y_pd[int(data_pd.size(0)*0.8):]
+    data_train = torch.cat((data_control_train, data_pd_train), 0)
+    y_train = torch.cat((y_control_train, y_pd_train), 0)
+    data_test = torch.cat((data_control_test, data_pd_test), 0)
+    y_test = torch.cat((y_control_test, y_pd_test), 0)
+    
+    trainset = data_utils.TensorDataset(data_train, y_train)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=10,
                                               shuffle=True)
 
+    testset = data_utils.TensorDataset(data_test, y_test)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=10, shuffle=False)
+                   
     net = Alexnet().to(device)
     if pretrained:
         net.load_state_dict(model_zoo.load_url(model_urls['alexnet']))
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(net.parameters(), lr=0.001)
 
     train(trainloader, net, criterion, optimizer, device)
-    # test(testloader, net, device)
+    test(testloader, net, device)
     
 
 if __name__ == "__main__":
