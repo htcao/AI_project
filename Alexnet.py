@@ -6,9 +6,11 @@ import torch.nn.functional as F
 import torch.optim as optim
 import time
 import torch.utils.model_zoo as model_zoo
+import numpy as np
 
 import math
 from collections import OrderedDict
+import torch.utils.data as data_utils
 
 
 class Alexnet(nn.Module):
@@ -18,7 +20,7 @@ class Alexnet(nn.Module):
         super(Alexnet, self).__init__()
         self.conv = nn.Sequential(
             # Stage 1
-            nn.Conv2d(3, 96, 11, stride=4),
+            nn.Conv2d(10, 96, 11, stride=4),
             nn.BatchNorm2d(96),
             nn.ReLU(),
             nn.MaxPool2d(3, stride=2),
@@ -41,7 +43,7 @@ class Alexnet(nn.Module):
         self.fc = nn.Sequential(
             # fully connected layers
             # parameters still needs to be changed
-            nn.Linear(256*6*6, 4096),
+            nn.Linear(256*5*5, 4096),
             nn.ReLU(),
             nn.Dropout(p=0.5),
             nn.Linear(4096, 4096),
@@ -76,7 +78,7 @@ def train(trainloader, net, criterion, optimizer, device):
             optimizer.step()
             # print statistics
             running_loss += loss.item()
-            if i % 100 == 99:    # print every 2000 mini-batches
+            if i % 5 == 4:    # print every 2000 mini-batches
                 end = time.time()
                 print('[epoch %d, iter %5d] loss: %.3f eplased time %.3f' %
                       (epoch + 1, i + 1, running_loss / 100, end-start))
@@ -107,20 +109,15 @@ def main():
     model_urls = {
         'alexnet': 'https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth',
     }
-    pretrained = True
-    transform = transforms.Compose(
-        [transforms.ToTensor(),
-         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    pretrained = False
+    data = np.load('data.npy')
+    data = torch.from_numpy(data.astype(float)).float()
+    y = torch.zeros(data.size(0), dtype=torch.long)
 
-    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                        download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=100,
-                                          shuffle=True)
+    trainset = data_utils.TensorDataset(data, y)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=10,
+                                              shuffle=True)
 
-    testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                       download=True, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=100,
-                                         shuffle=False)
     net = Alexnet().to(device)
     if pretrained:
         net.load_state_dict(model_zoo.load_url(model_urls['alexnet']))
@@ -128,7 +125,7 @@ def main():
     optimizer = optim.Adam(net.parameters(), lr=0.001)
 
     train(trainloader, net, criterion, optimizer, device)
-    test(testloader, net, device)
+    # test(testloader, net, device)
     
 
 if __name__ == "__main__":
