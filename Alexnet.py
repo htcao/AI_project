@@ -18,43 +18,37 @@ class Alexnet(nn.Module):
     # the number of channels and hidden units are decreased compared to the architecture in paper
     def __init__(self):
         super(Alexnet, self).__init__()
-        self.conv = nn.Sequential(
-            # Stage 1
-            nn.Conv2d(3, 96, 11, stride=4),
-            nn.BatchNorm2d(96),
-            nn.ReLU(),
-            nn.MaxPool2d(3, stride=2),
-            # Stage 2
-            nn.Conv2d(96, 256, 5, stride=1, padding=2),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(3, stride=2),
-            # Stage 3
-            nn.Conv2d(256, 384, 3, stride=1, padding=1),
-            nn.ReLU(),
-            # Stage 4
-            nn.Conv2d(384, 384, 3, stride=1, padding=1),
-            nn.ReLU(),
-            # Stage 5
-            nn.Conv2d(384, 256, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(3, stride=2)
+        self.features = nn.Sequential(
+            nn.Conv2d(10, 64, kernel_size=11, stride=4, padding=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.Conv2d(64, 192, kernel_size=5, padding=2),
+            nn.BatchNorm2d(192),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.Conv2d(192, 384, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(384, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
         )
-        self.fc = nn.Sequential(
-            # fully connected layers
-            # parameters still needs to be changed
-            nn.Linear(256*5*5, 4096),
-            nn.ReLU(),
-            nn.Dropout(p=0.5),
+        self.classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
             nn.Linear(4096, 4096),
-            nn.ReLU(),
-            nn.Dropout(p=0.5),
-            nn.Linear(4096, 1)
+            nn.ReLU(inplace=True),
         )
+        self.fc = nn.Linear(4096, 1)
 
     def forward(self, x):
-        x = self.conv(x)
-        x = x.view(x.size(0), -1)
+        x = self.features(x)
+        x = x.view(x.size(0), 256 * 6 * 6)
+        x = self.classifier(x)
         x = self.fc(x)
         return x
 
@@ -89,6 +83,7 @@ def train(trainloader, net, criterion, optimizer, device):
 def test(testloader, net, device):
     correct = 0
     total = 0
+    net.eval()
     with torch.no_grad():
         for data in testloader:
             images, labels = data
@@ -111,7 +106,6 @@ def main():
     pretrained = False
     data_control = np.load('data.npy')
     data_control = torch.from_numpy(data_control.astype(float)).float()
-    data_control = data_control[:, 4:7, :, :]
     y_control = torch.zeros(data_control.size(0), dtype=torch.float)
     data_control_train = data_control[0:int(data_control.size(0)*0.8)]
     data_control_test =  data_control[int(data_control.size(0)*0.8):]
@@ -119,7 +113,6 @@ def main():
     y_control_test = y_control[int(data_control.size(0)*0.8):]
     data_pd = np.load('PD_data.npy')
     data_pd = torch.from_numpy(data_pd.astype(float)).float()
-    data_pd = data_pd[:, 4:7, :, :]
     y_pd = torch.ones(data_pd.size(0), dtype=torch.float)
     data_pd_train = data_pd[0:int(data_pd.size(0)*0.8)]
     data_pd_test =  data_pd[int(data_pd.size(0)*0.8):]
@@ -129,6 +122,7 @@ def main():
     y_train = torch.cat((y_control_train, y_pd_train), 0)
     data_test = torch.cat((data_control_test, data_pd_test), 0)
     y_test = torch.cat((y_control_test, y_pd_test), 0)
+    print(y_test.size())
     
     trainset = data_utils.TensorDataset(data_train, y_train)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=10,
@@ -139,7 +133,9 @@ def main():
                    
     net = Alexnet().to(device)
     if pretrained:
-        net.load_state_dict(model_zoo.load_url(model_urls['alexnet']))
+        pre_model = model_zoo.load_url(model_urls['alexnet'])
+        pre_model['features.0.weight'] = torch.randn(64, 10, 11, 11)
+        net.load_state_dict(pre_model, strict=False)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(net.parameters(), lr=0.001)
 
