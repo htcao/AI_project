@@ -10,10 +10,9 @@ from torch.autograd import Function
 from torchvision import models
 from torchvision import utils
 import cv2
-import sys
 import numpy as np
-import argparse
 from Alexnet import Alexnet
+from image_preprocessing import *
 
 class FeatureExtractor():
     """ Class for extracting activations and 
@@ -178,41 +177,29 @@ class GuidedBackpropReLUModel:
     
     
 if __name__ == '__main__':
-	""" 
-	1. Loads an image with opencv.
-	2. Preprocesses it for VGG19 and converts to a pytorch variable.
-	3. Makes a forward pass to find the category index with the highest score,
-	and computes intermediate activations.
-	Makes the visualization. """
-
     # load the model
     load_path = './weights/alexnet_weight.pt'
     model = Alexnet()
     model.load_state_dict(torch.load(load_path))
     
-	grad_cam = GradCam(model = model, \
-					target_layer_names = ["12"], use_cuda=args.use_cuda)
-    
-    img_path = './img/'
-	img = cv2.imread(img_path, 1)
-	img = np.float32(cv2.resize(img, (224, 224))) / 255
-	input = preprocess_image(img)
+    grad_cam = GradCam(model = model, target_layer_names = ["12"], use_cuda=args.use_cuda)
+    input, img = load_data('PD_data.npy')
 
 	# If None, returns the map for the highest scoring category.
 	# Otherwise, targets the requested index.
-	target_index = 0
+    target_index = 0
 
-	mask = grad_cam(input, target_index)
+    mask = grad_cam(input, target_index)
 
-	show_cam_on_image(img, mask)
+    show_cam_on_image(img, mask)
 
-	gb_model = GuidedBackpropReLUModel(model = model, use_cuda=args.use_cuda)
-	gb = gb_model(input, index=target_index)
-	utils.save_image(torch.from_numpy(gb), 'gb.jpg')
+    gb_model = GuidedBackpropReLUModel(model = model, use_cuda=args.use_cuda)
+    gb = gb_model(input, index=target_index)
+    utils.save_image(torch.from_numpy(gb), 'gb.jpg')
 
-	cam_mask = np.zeros(gb.shape)
-	for i in range(0, gb.shape[0]):
-	    cam_mask[i, :, :] = mask
+    cam_mask = np.zeros(gb.shape)
+    for i in range(0, gb.shape[0]):
+        cam_mask[i, :, :] = mask
 
-	cam_gb = np.multiply(cam_mask, gb)
-	utils.save_image(torch.from_numpy(cam_gb), 'cam_gb.jpg')
+    cam_gb = np.multiply(cam_mask, gb)
+    utils.save_image(torch.from_numpy(cam_gb), 'cam_gb.jpg')
