@@ -11,6 +11,7 @@ import numpy as np
 import math
 from collections import OrderedDict
 import torch.utils.data as data_utils
+import matplotlib.pyplot as plt
 
 
 class Alexnet(nn.Module):
@@ -42,14 +43,13 @@ class Alexnet(nn.Module):
             nn.Dropout(),
             nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
+            nn.Linear(4096, 1),
         )
-        self.fc = nn.Linear(4096, 1)
 
     def forward(self, x):
         x = self.features(x)
         x = x.view(x.size(0), 256 * 6 * 6)
         x = self.classifier(x)
-        x = self.fc(x)
         return x
 
 
@@ -145,7 +145,13 @@ def main():
 
     train(trainloader, net, criterion, optimizer, device)
     test(testloader, net, device)
-    
+    torch.save(net.state_dict(), './weights/alexnet_weight.pt')
+#    conv5_weights = net.state_dict()['features.12.weight'].cpu()
+#    image_weight = conv5_weights[0,:,:,:].numpy()
+#    image_weight = np.maximum(image_weight, 0)
+#    image_weight = np.mean(image_weight, axis=0)
+#    image_weight = (image_weight-np.min(image_weight))/(np.max(image_weight)-np.min(image_weight))
+#    plt.imshow(image_weight)
 
 if __name__ == "__main__":
     main()
