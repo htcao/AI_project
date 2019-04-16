@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 from Alexnet import Alexnet
 from image_preprocessing import *
+from torch.autograd import Variable
 
 class FeatureExtractor():
     """ Class for extracting activations and 
@@ -56,11 +57,14 @@ class ModelOutputs():
     
     
 def show_cam_on_image(img, mask):
-	heatmap = cv2.applyColorMap(np.uint8(255*mask), cv2.COLORMAP_JET)
-	heatmap = np.float32(heatmap) / 255
-	cam = heatmap + np.float32(img)
-	cam = cam / np.max(cam)
-	cv2.imwrite("cam.jpg", np.uint8(255 * cam))
+#    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    img = (img/np.max(img)).transpose(1, 2, 0)
+    heatmap = cv2.applyColorMap(np.uint8(255*mask), cv2.COLORMAP_JET)
+    heatmap = np.float32(heatmap) / 255
+    cam = heatmap + np.float32(img)
+    cam = cam / np.max(cam)
+    cv2.imwrite("cam.jpg", np.uint8(255 * cam))
+    cv2.imwrite("heatmap.jpg", np.uint8(255 * heatmap))
     
     
 class GradCam:
@@ -84,6 +88,7 @@ class GradCam:
 
 		if index == None:
 			index = np.argmax(output.cpu().data.numpy())
+		print(output.data)
 
 		one_hot = np.zeros((1, output.size()[-1]), dtype = np.float32)
 		one_hot[0][index] = 1
@@ -95,7 +100,7 @@ class GradCam:
 
 		self.model.features.zero_grad()
 		self.model.classifier.zero_grad()
-		one_hot.backward(retain_variables=True)
+		one_hot.backward(retain_graph=True)
 
 		grads_val = self.extractor.get_gradients()[-1].cpu().data.numpy()
 
@@ -166,9 +171,9 @@ class GuidedBackpropReLUModel:
 		else:
 			one_hot = torch.sum(one_hot * output)
 
-		# self.model.features.zero_grad()
-		# self.model.classifier.zero_grad()
-		one_hot.backward(retain_variables=True)
+#		self.model.features.zero_grad()
+#		self.model.classifier.zero_grad()
+		one_hot.backward(retain_graph=True)
 
 		output = input.grad.cpu().data.numpy()
 		output = output[0,:,:,:]
@@ -182,7 +187,7 @@ if __name__ == '__main__':
     model = Alexnet()
     model.load_state_dict(torch.load(load_path))
     
-    grad_cam = GradCam(model = model, target_layer_names = ["12"], use_cuda=args.use_cuda)
+    grad_cam = GradCam(model = model, target_layer_names = ["12"], use_cuda=True)
     input, img = load_data('PD_data.npy')
 
 	# If None, returns the map for the highest scoring category.
@@ -193,7 +198,7 @@ if __name__ == '__main__':
 
     show_cam_on_image(img, mask)
 
-    gb_model = GuidedBackpropReLUModel(model = model, use_cuda=args.use_cuda)
+    gb_model = GuidedBackpropReLUModel(model = model, use_cuda=True)
     gb = gb_model(input, index=target_index)
     utils.save_image(torch.from_numpy(gb), 'gb.jpg')
 

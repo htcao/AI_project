@@ -20,7 +20,7 @@ class Alexnet(nn.Module):
     def __init__(self):
         super(Alexnet, self).__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(10, 64, kernel_size=11, stride=4, padding=2),
+            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2),
@@ -110,6 +110,7 @@ def main():
     }
     pretrained = False
     data_control = np.load('data.npy')
+    data_control = data_control[:, 4:7, :, :]
     data_control = torch.from_numpy(data_control.astype(float)).float()
     y_control = torch.zeros(data_control.size(0), dtype=torch.float)
     data_control_train = data_control[0:int(data_control.size(0)*0.8)]
@@ -117,6 +118,7 @@ def main():
     y_control_train = y_control[0:int(data_control.size(0)*0.8)]
     y_control_test = y_control[int(data_control.size(0)*0.8):]
     data_pd = np.load('PD_data.npy')
+    data_pd = data_pd[:, 4:7, :, :]
     data_pd = torch.from_numpy(data_pd.astype(float)).float()
     y_pd = torch.ones(data_pd.size(0), dtype=torch.float)
     data_pd_train = data_pd[0:int(data_pd.size(0)*0.8)]
