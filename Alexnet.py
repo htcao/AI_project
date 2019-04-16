@@ -57,6 +57,8 @@ def train(trainloader, net, criterion, optimizer, device):
     for epoch in range(10):  # loop over the dataset multiple times
         start = time.time()
         running_loss = 0.0
+        correct = 0
+        total = 0
         for i, (images, labels) in enumerate(trainloader):
             images = images.to(device)
             labels = labels.view(-1, 1).to(device)
@@ -71,10 +73,13 @@ def train(trainloader, net, criterion, optimizer, device):
             optimizer.step()
             # print statistics
             running_loss += loss.item()
-            if i % 5 == 4:    # print every 2000 mini-batches
+            predicted = (outputs.data > 0).float()
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            if i % 5 == 4:    # print every 5 mini-batches
                 end = time.time()
-                print('[epoch %d, iter %5d] loss: %.3f eplased time %.3f' %
-                      (epoch + 1, i + 1, running_loss / 100, end-start))
+                print('[epoch %d, iter %5d] loss: %.3f training accuracy: %.2f %% eplased time %.3f' %
+                      (epoch + 1, i + 1, running_loss / 5 / labels.size(0), 100 * correct / total, end-start))
                 start = time.time()
                 running_loss = 0.0
     print('Finished Training')
@@ -93,7 +98,7 @@ def test(testloader, net, device):
             predicted = (outputs.data > 0).float()
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-    print('Accuracy of the network on the 10000 test images: %d %%' % (
+    print('Accuracy of the network on the %d test images: %d %%' % (total, 
         100 * correct / total))
 
 
@@ -122,14 +127,13 @@ def main():
     y_train = torch.cat((y_control_train, y_pd_train), 0)
     data_test = torch.cat((data_control_test, data_pd_test), 0)
     y_test = torch.cat((y_control_test, y_pd_test), 0)
-    print(y_test.size())
     
     trainset = data_utils.TensorDataset(data_train, y_train)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=10,
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=15,
                                               shuffle=True)
 
     testset = data_utils.TensorDataset(data_test, y_test)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=10, shuffle=False)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=15, shuffle=True)
                    
     net = Alexnet().to(device)
     if pretrained:
