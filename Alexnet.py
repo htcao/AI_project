@@ -12,6 +12,7 @@ import math
 from collections import OrderedDict
 import torch.utils.data as data_utils
 import matplotlib.pyplot as plt
+import os
 
 
 class Alexnet(nn.Module):
@@ -20,7 +21,7 @@ class Alexnet(nn.Module):
     def __init__(self):
         super(Alexnet, self).__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+            nn.Conv2d(10, 64, kernel_size=11, stride=4, padding=2),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2),
@@ -105,12 +106,10 @@ def test(testloader, net, device):
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #    device = torch.device('cpu')
-    model_urls = {
-        'alexnet': 'https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth',
-    }
-    pretrained = False
-    data_control = np.load('data.npy')
-    data_control = data_control[:, 4:7, :, :]
+    pretrained = True
+    data_control = np.load('Control_data_new.npy')
+    np.random.shuffle(data_control)
+#    data_control = data_control[:, 4:7, :, :]
     data_control = torch.from_numpy(data_control.astype(float)).float()
     y_control = torch.zeros(data_control.size(0), dtype=torch.float)
     data_control_train = data_control[0:int(data_control.size(0)*0.8)]
@@ -118,7 +117,9 @@ def main():
     y_control_train = y_control[0:int(data_control.size(0)*0.8)]
     y_control_test = y_control[int(data_control.size(0)*0.8):]
     data_pd = np.load('PD_data.npy')
-    data_pd = data_pd[:, 4:7, :, :]
+    np.random.shuffle(data_pd)
+#    data_pd = data_pd[0:201, :, :, :]
+#    data_pd = data_pd[:, 4:7, :, :]
     data_pd = torch.from_numpy(data_pd.astype(float)).float()
     y_pd = torch.ones(data_pd.size(0), dtype=torch.float)
     data_pd_train = data_pd[0:int(data_pd.size(0)*0.8)]
@@ -139,14 +140,14 @@ def main():
                    
     net = Alexnet().to(device)
     if pretrained:
-        pre_model = model_zoo.load_url(model_urls['alexnet'])
-        pre_model['features.0.weight'] = torch.randn(64, 10, 11, 11)
-        net.load_state_dict(pre_model, strict=False)
+        net.load_state_dict(torch.load('./weights/alexnet_weight.pt'))
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(net.parameters(), lr=0.001)
 
     train(trainloader, net, criterion, optimizer, device)
     test(testloader, net, device)
+    if 'weights' not in os.listdir():
+        os.makedirs('weights')
     torch.save(net.state_dict(), './weights/alexnet_weight.pt')
 #    conv5_weights = net.state_dict()['features.12.weight'].cpu()
 #    image_weight = conv5_weights[0,:,:,:].numpy()

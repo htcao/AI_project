@@ -59,12 +59,14 @@ class ModelOutputs():
 def show_cam_on_image(img, mask):
 #    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
     img = (img/np.max(img)).transpose(1, 2, 0)
+    cv2.imwrite('original_img.jpg', np.uint8(255 * img[:, :, 0]))
     heatmap = cv2.applyColorMap(np.uint8(255*mask), cv2.COLORMAP_JET)
     heatmap = np.float32(heatmap) / 255
+    cv2.imwrite("heatmap.jpg", np.uint8(255 * heatmap))
     cam = heatmap + np.float32(img)
     cam = cam / np.max(cam)
     cv2.imwrite("cam.jpg", np.uint8(255 * cam))
-    cv2.imwrite("heatmap.jpg", np.uint8(255 * heatmap))
+    
     
     
 class GradCam:
@@ -198,13 +200,13 @@ if __name__ == '__main__':
 
     show_cam_on_image(img, mask)
 
-    gb_model = GuidedBackpropReLUModel(model = model, use_cuda=True)
-    gb = gb_model(input, index=target_index)
-    utils.save_image(torch.from_numpy(gb), 'gb.jpg')
-
-    cam_mask = np.zeros(gb.shape)
-    for i in range(0, gb.shape[0]):
-        cam_mask[i, :, :] = mask
-
-    cam_gb = np.multiply(cam_mask, gb)
-    utils.save_image(torch.from_numpy(cam_gb), 'cam_gb.jpg')
+#    gb_model = GuidedBackpropReLUModel(model = model, use_cuda=True)
+#    gb = gb_model(input, index=target_index)
+#    utils.save_image(torch.from_numpy(gb), 'gb.jpg')
+#
+#    cam_mask = np.zeros(gb.shape)
+#    for i in range(0, gb.shape[0]):
+#        cam_mask[i, :, :] = mask
+#
+#    cam_gb = np.multiply(cam_mask, gb)
+#    utils.save_image(torch.from_numpy(cam_gb), 'cam_gb.jpg')

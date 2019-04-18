@@ -25,10 +25,11 @@ def img_preprocessing(folder_path):
 
 def load_data(filename):
     data = np.load(filename)
-    data = data[50, 4:7, :, :]
+    data = data[10, :, :, :]
 #    data = np.uint8(data/np.max(data)*255)
 #    img = data[data.shape[0]//2]
-    img = data
+    img = data[4:7, :, :]
+    plt.imshow(img[0, :, :], cmap='gray')
     data = torch.from_numpy(data.astype(float)).float()
     data.unsqueeze_(0)
     input = Variable(data, requires_grad = True)
