@@ -107,8 +107,9 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #    device = torch.device('cpu')
     pretrained = True
+    save_flag = True
     data_control = np.load('Control_data_new.npy')
-    np.random.shuffle(data_control)
+#    np.random.shuffle(data_control)
 #    data_control = data_control[:, 4:7, :, :]
     data_control = torch.from_numpy(data_control.astype(float)).float()
     y_control = torch.zeros(data_control.size(0), dtype=torch.float)
@@ -117,7 +118,7 @@ def main():
     y_control_train = y_control[0:int(data_control.size(0)*0.8)]
     y_control_test = y_control[int(data_control.size(0)*0.8):]
     data_pd = np.load('PD_data.npy')
-    np.random.shuffle(data_pd)
+#    np.random.shuffle(data_pd)
 #    data_pd = data_pd[0:201, :, :, :]
 #    data_pd = data_pd[:, 4:7, :, :]
     data_pd = torch.from_numpy(data_pd.astype(float)).float()
@@ -148,7 +149,8 @@ def main():
     test(testloader, net, device)
     if 'weights' not in os.listdir():
         os.makedirs('weights')
-    torch.save(net.state_dict(), './weights/alexnet_weight.pt')
+    if save_flag:
+        torch.save(net.state_dict(), './weights/alexnet_weight.pt')
 #    conv5_weights = net.state_dict()['features.12.weight'].cpu()
 #    image_weight = conv5_weights[0,:,:,:].numpy()
 #    image_weight = np.maximum(image_weight, 0)
