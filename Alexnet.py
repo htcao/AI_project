@@ -8,7 +8,7 @@ import time
 import torch.utils.model_zoo as model_zoo
 import numpy as np
 
-import math
+import copy
 from collections import OrderedDict
 import torch.utils.data as data_utils
 import matplotlib.pyplot as plt
@@ -55,35 +55,81 @@ class Alexnet(nn.Module):
 
 
 def train(trainloader, net, criterion, optimizer, device):
+    since = time.time()
+    best_model_wts = copy.deepcopy(net.state_dict())
+    best_acc = 0.0
     for epoch in range(10):  # loop over the dataset multiple times
-        start = time.time()
-        running_loss = 0.0
-        correct = 0
-        total = 0
-        for i, (images, labels) in enumerate(trainloader):
-            images = images.to(device)
-            labels = labels.view(-1, 1).to(device)
-            # TODO: zero the parameter gradients
-            # TODO: forward pass
-            # TODO: backward pass
-            # TODO: optimize the network
-            optimizer.zero_grad()
-            outputs = net(images)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-            # print statistics
-            running_loss += loss.item()
-            predicted = (outputs.data > 0).float()
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-            if i % 5 == 4:    # print every 5 mini-batches
-                end = time.time()
-                print('[epoch %d, iter %5d] loss: %.3f training accuracy: %.2f %% eplased time %.3f' %
-                      (epoch + 1, i + 1, running_loss / 5 / labels.size(0), 100 * correct / total, end-start))
-                start = time.time()
-                running_loss = 0.0
-    print('Finished Training')
+        print('Epoch {}/{}'.format(epoch, 10 - 1))
+        print('-' * 10)
+        # Each epoch has a training and validation phase
+        for phase in ['train', 'val']:
+            if phase == 'train':
+                net.train()  # Set model to training mode
+            else:
+                net.eval()  # Set model to evaluate mode
+            running_loss = 0.0
+            running_correct = 0
+            # Iterate over data
+            for features, labels, size in trainloader[phase]:
+                features = features.to(device)
+                labels = labels.to(device)
+                size = size.to(device)
+                optimizer.zero_grad()
+                with torch.set_grad_enabled(phase == 'train'):
+                    outputs = net(features.float(), size)
+                    loss = criterion(outputs, labels)
+                    predicted = (outputs.data >= 0).float()
+                    if phase == 'train':
+                        loss.backward()
+                        optimizer.step()
+                # print statistics
+                running_loss += loss.item() * features.size(0)
+                running_correct += torch.sum(predicted == labels)
+
+            epoch_loss = running_loss / len(trainloader[phase].dataset)
+            epoch_acc = running_correct.double() / len(trainloader[phase].dataset)
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+            # deep copy the model
+            if phase == 'val' and epoch_acc > best_acc:
+                best_acc = epoch_acc
+                best_model_wts = copy.deepcopy(net.state_dict())
+        print()
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    print('Best val Acc: {:4f}'.format(best_acc))
+
+    # load best model weights
+    net.load_state_dict(best_model_wts)
+#def train(trainloader, net, criterion, optimizer, device):
+#    for epoch in range(10):  # loop over the dataset multiple times
+#        start = time.time()
+#        running_loss = 0.0
+#        correct = 0
+#        total = 0
+#        for i, (images, labels) in enumerate(trainloader):
+#            images = images.to(device)
+#            labels = labels.view(-1, 1).to(device)
+#            # TODO: zero the parameter gradients
+#            # TODO: forward pass
+#            # TODO: backward pass
+#            # TODO: optimize the network
+#            optimizer.zero_grad()
+#            outputs = net(images)
+#            loss = criterion(outputs, labels)
+#            loss.backward()
+#            optimizer.step()
+#            # print statistics
+#            running_loss += loss.item()
+#            predicted = (outputs.data > 0).float()
+#            total += labels.size(0)
+#            correct += (predicted == labels).sum().item()
+#            if i % 5 == 4:    # print every 5 mini-batches
+#                end = time.time()
+#                print('[epoch %d, iter %5d] loss: %.3f training accuracy: %.2f %% eplased time %.3f' %
+#                      (epoch + 1, i + 1, running_loss / 5 / labels.size(0), 100 * correct / total, end-start))
+#                start = time.time()
+#                running_loss = 0.0
+#    print('Finished Training')
 
 
 def test(testloader, net, device):
@@ -113,9 +159,11 @@ def main():
 #    data_control = data_control[:, 4:7, :, :]
     data_control = torch.from_numpy(data_control.astype(float)).float()
     y_control = torch.zeros(data_control.size(0), dtype=torch.float)
-    data_control_train = data_control[0:int(data_control.size(0)*0.8)]
+    data_control_train = data_control[0:int(data_control.size(0)*0.6)]
+    data_control_val = data_control[int(data_control.size(0)*0.6):int(data_control.size(0)*0.8)]
     data_control_test =  data_control[int(data_control.size(0)*0.8):]
-    y_control_train = y_control[0:int(data_control.size(0)*0.8)]
+    y_control_train = y_control[0:int(data_control.size(0)*0.6)]
+    y_control_val = y_control[int(data_control.size(0)*0.6):int(data_control.size(0)*0.8)]
     y_control_test = y_control[int(data_control.size(0)*0.8):]
     data_pd = np.load('PD_data.npy')
 #    np.random.shuffle(data_pd)
@@ -123,21 +171,30 @@ def main():
 #    data_pd = data_pd[:, 4:7, :, :]
     data_pd = torch.from_numpy(data_pd.astype(float)).float()
     y_pd = torch.ones(data_pd.size(0), dtype=torch.float)
-    data_pd_train = data_pd[0:int(data_pd.size(0)*0.8)]
+    data_pd_train = data_pd[0:int(data_pd.size(0)*0.6)]
+    data_pd_val = data_pd[int(data_pd.size(0)*0.6):int(data_pd.size(0)*0.8)]
     data_pd_test =  data_pd[int(data_pd.size(0)*0.8):]
-    y_pd_train = y_pd[0:int(data_pd.size(0)*0.8)]
+    y_pd_train = y_pd[0:int(data_pd.size(0)*0.6)]
+    y_pd_val = y_pd[int(data_pd.size(0)*0.6):int(data_pd.size(0)*0.8)]
     y_pd_test = y_pd[int(data_pd.size(0)*0.8):]
     data_train = torch.cat((data_control_train, data_pd_train), 0)
-    y_train = torch.cat((y_control_train, y_pd_train), 0)
+    data_val = torch.cat((data_control_val, data_pd_val), 0)
     data_test = torch.cat((data_control_test, data_pd_test), 0)
+    y_train = torch.cat((y_control_train, y_pd_train), 0)
+    y_val = torch.cat((y_control_val, y_pd_val), 0)
     y_test = torch.cat((y_control_test, y_pd_test), 0)
     
     trainset = data_utils.TensorDataset(data_train, y_train)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=15,
                                               shuffle=True)
+    
+    valset = data_utils.TensorDataset(data_val, y_val)
+    valloader = torch.utils.data.DataLoader(valset, batch_size=15, shuffle=False)
+    
+    Dataloader = {'train': trainloader, 'val': valloader}
 
     testset = data_utils.TensorDataset(data_test, y_test)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=15, shuffle=True)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=15, shuffle=False)
                    
     net = Alexnet().to(device)
     if pretrained:
@@ -145,7 +202,7 @@ def main():
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(net.parameters(), lr=0.001)
 
-    train(trainloader, net, criterion, optimizer, device)
+    train(Dataloader, net, criterion, optimizer, device)
     test(testloader, net, device)
     if 'weights' not in os.listdir():
         os.makedirs('weights')
