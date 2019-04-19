@@ -70,15 +70,14 @@ def train(trainloader, net, criterion, optimizer, device):
             running_loss = 0.0
             running_correct = 0
             # Iterate over data
-            for features, labels, size in trainloader[phase]:
+            for features, labels in trainloader[phase]:
                 features = features.to(device)
-                labels = labels.to(device)
-                size = size.to(device)
+                labels = labels.view(-1, 1).to(device)
                 optimizer.zero_grad()
                 with torch.set_grad_enabled(phase == 'train'):
-                    outputs = net(features.float(), size)
+                    outputs = net(features)
                     loss = criterion(outputs, labels)
-                    predicted = (outputs.data >= 0).float()
+                    predicted = (outputs.data > 0).float()
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
@@ -150,8 +149,8 @@ def test(testloader, net, device):
 
 
 def main():
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#    device = torch.device('cpu')
+#    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cpu')
     pretrained = True
     save_flag = True
     data_control = np.load('Control_data_new.npy')
@@ -204,7 +203,7 @@ def main():
 
     train(Dataloader, net, criterion, optimizer, device)
     test(testloader, net, device)
-    if 'weights' not in os.listdir():
+    if not os.path.exists('./weights'):
         os.makedirs('weights')
     if save_flag:
         torch.save(net.state_dict(), './weights/alexnet_weight.pt')
