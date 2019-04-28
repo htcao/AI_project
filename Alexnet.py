@@ -76,7 +76,9 @@ def train(trainloader, net, criterion, optimizer, device):
                 optimizer.zero_grad()
                 with torch.set_grad_enabled(phase == 'train'):
                     outputs = net(features)
-                    loss = criterion(outputs, labels)
+                    # loss = criterion(outputs, labels)
+                    loss = torch.mean(torch.clamp(1 - outputs*labels, min=0))
+                    # loss += 0.01 * torch.mean(net.classifier._modules['6'].weight ** 2)  # l2 penalty
                     predicted = (outputs.data > 0).float()
                     if phase == 'train':
                         loss.backward()
@@ -149,15 +151,16 @@ def test(testloader, net, device):
 
 
 def main():
-#    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    device = torch.device('cpu')
-    pretrained = True
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cpu')
+    pretrained = False
     save_flag = True
     data_control = np.load('Control_data_new.npy')
 #    np.random.shuffle(data_control)
 #    data_control = data_control[:, 4:7, :, :]
     data_control = torch.from_numpy(data_control.astype(float)).float()
-    y_control = torch.zeros(data_control.size(0), dtype=torch.float)
+    # y_control = torch.zeros(data_control.size(0), dtype=torch.float)
+    y_control = -torch.ones(data_control.size(0), dtype=torch.float)
     data_control_train = data_control[0:int(data_control.size(0)*0.6)]
     data_control_val = data_control[int(data_control.size(0)*0.6):int(data_control.size(0)*0.8)]
     data_control_test =  data_control[int(data_control.size(0)*0.8):]
@@ -206,7 +209,7 @@ def main():
     if not os.path.exists('./weights'):
         os.makedirs('weights')
     if save_flag:
-        torch.save(net.state_dict(), './weights/alexnet_weight.pt')
+        torch.save(net.state_dict(), './weights/alexnet_weight_svm.pt')
 #    conv5_weights = net.state_dict()['features.12.weight'].cpu()
 #    image_weight = conv5_weights[0,:,:,:].numpy()
 #    image_weight = np.maximum(image_weight, 0)
