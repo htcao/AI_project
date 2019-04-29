@@ -21,7 +21,7 @@ class Alexnet(nn.Module):
     def __init__(self):
         super(Alexnet, self).__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(10, 64, kernel_size=11, stride=4, padding=2),
+            nn.Conv2d(1, 64, kernel_size=11, stride=4, padding=2),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2),
@@ -78,8 +78,8 @@ def train(trainloader, net, criterion, optimizer, device):
                     outputs = net(features)
                     # loss = criterion(outputs, labels)
                     loss = torch.mean(torch.clamp(1 - outputs*labels, min=0))
-                    # loss += 0.01 * torch.mean(net.classifier._modules['6'].weight ** 2)  # l2 penalty
-                    predicted = (outputs.data > 0).float()
+                    loss += 0.01 * torch.mean(net.classifier._modules['6'].weight ** 2)  # l2 penalty
+                    predicted = 2*(outputs.data > 0).float()-1
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
@@ -143,7 +143,7 @@ def test(testloader, net, device):
             images = images.to(device)
             labels = labels.view(-1, 1).to(device)
             outputs = net(images)
-            predicted = (outputs.data > 0).float()
+            predicted = 2*(outputs.data > 0).float()-1
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     print('Accuracy of the network on the %d test images: %d %%' % (total, 
@@ -156,7 +156,10 @@ def main():
     pretrained = False
     save_flag = True
     data_control = np.load('Control_data_new.npy')
-#    np.random.shuffle(data_control)
+    arrays = [data_control[i] for i in range(data_control.shape[0])]
+    data_control = np.concatenate(arrays, axis=0)
+    data_control = data_control[:, np.newaxis, :, :]
+    np.random.shuffle(data_control)
 #    data_control = data_control[:, 4:7, :, :]
     data_control = torch.from_numpy(data_control.astype(float)).float()
     # y_control = torch.zeros(data_control.size(0), dtype=torch.float)
@@ -167,9 +170,12 @@ def main():
     y_control_train = y_control[0:int(data_control.size(0)*0.6)]
     y_control_val = y_control[int(data_control.size(0)*0.6):int(data_control.size(0)*0.8)]
     y_control_test = y_control[int(data_control.size(0)*0.8):]
-    data_pd = np.load('PD_data.npy')
-#    np.random.shuffle(data_pd)
-#    data_pd = data_pd[0:201, :, :, :]
+    data_pd = np.load('PD_data_new.npy')
+    arrays = [data_pd[i] for i in range(data_pd.shape[0])]
+    data_pd = np.concatenate(arrays, axis=0)
+    data_pd = data_pd[:, np.newaxis, :, :]
+    np.random.shuffle(data_pd)
+    # data_pd = data_pd[201:, :, :, :]
 #    data_pd = data_pd[:, 4:7, :, :]
     data_pd = torch.from_numpy(data_pd.astype(float)).float()
     y_pd = torch.ones(data_pd.size(0), dtype=torch.float)

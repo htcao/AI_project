@@ -102,7 +102,7 @@ if __name__ == '__main__':
     target_class = 0  
     prep_img, original_image = load_data('PD_data.npy')
     original_image = Image.fromarray(original_image[0,:,:])
-    load_path = './weights/alexnet_weight.pt'
+    load_path = './weights/alexnet_weight_svm.pt'
     pretrained_model = Alexnet()
     pretrained_model.load_state_dict(torch.load(load_path))
     file_name_to_export = 'PD'
