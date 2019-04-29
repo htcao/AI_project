@@ -7,7 +7,7 @@ from PIL import Image
 import numpy as np
 import torch
 from image_preprocessing import *
-from Alexnet import Alexnet
+from Alexnet_3dversion import Alexnet
 
 from misc_functions import get_example_params, save_class_activation_images
 
@@ -87,8 +87,10 @@ class GradCam():
         cam = np.maximum(cam, 0)
         cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam))  # Normalize between 0-1
         cam = np.uint8(cam * 255)  # Scale between 0-255 to visualize
-        cam = np.uint8(Image.fromarray(cam).resize((input_image.shape[2],
-                       input_image.shape[3]), Image.ANTIALIAS))
+        cam = np.uint8(Image.fromarray(cam[1]).resize((input_image.shape[3],
+                                                    input_image.shape[4]), Image.ANTIALIAS))
+        # cam = np.uint8(Image.fromarray(cam).resize((input_image.shape[2],
+        #                input_image.shape[3]), Image.ANTIALIAS))
         # ^ I am extremely unhappy with this line. Originally resizing was done in cv2 which
         # supports resizing numpy matrices, however, when I moved the repository to PIL, this
         # option is out of the window. So, in order to use resizing with ANTIALIAS feature of PIL,
@@ -101,6 +103,7 @@ if __name__ == '__main__':
     # Get params
     target_class = 0  
     prep_img, original_image = load_data('PD_data.npy')
+    prep_img = prep_img[np.newaxis, :, :, :, :]
     original_image = Image.fromarray(original_image[0,:,:])
     load_path = './weights/alexnet_weight_svm.pt'
     pretrained_model = Alexnet()
