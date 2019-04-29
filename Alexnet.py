@@ -101,36 +101,6 @@ def train(trainloader, net, criterion, optimizer, device):
 
     # load best model weights
     net.load_state_dict(best_model_wts)
-#def train(trainloader, net, criterion, optimizer, device):
-#    for epoch in range(10):  # loop over the dataset multiple times
-#        start = time.time()
-#        running_loss = 0.0
-#        correct = 0
-#        total = 0
-#        for i, (images, labels) in enumerate(trainloader):
-#            images = images.to(device)
-#            labels = labels.view(-1, 1).to(device)
-#            # TODO: zero the parameter gradients
-#            # TODO: forward pass
-#            # TODO: backward pass
-#            # TODO: optimize the network
-#            optimizer.zero_grad()
-#            outputs = net(images)
-#            loss = criterion(outputs, labels)
-#            loss.backward()
-#            optimizer.step()
-#            # print statistics
-#            running_loss += loss.item()
-#            predicted = (outputs.data > 0).float()
-#            total += labels.size(0)
-#            correct += (predicted == labels).sum().item()
-#            if i % 5 == 4:    # print every 5 mini-batches
-#                end = time.time()
-#                print('[epoch %d, iter %5d] loss: %.3f training accuracy: %.2f %% eplased time %.3f' %
-#                      (epoch + 1, i + 1, running_loss / 5 / labels.size(0), 100 * correct / total, end-start))
-#                start = time.time()
-#                running_loss = 0.0
-#    print('Finished Training')
 
 
 def test(testloader, net, device):
@@ -170,7 +140,7 @@ def main():
     y_control_train = y_control[0:int(data_control.size(0)*0.6)]
     y_control_val = y_control[int(data_control.size(0)*0.6):int(data_control.size(0)*0.8)]
     y_control_test = y_control[int(data_control.size(0)*0.8):]
-    data_pd = np.load('PD_data_new.npy')
+    data_pd = np.load('PD_data.npy')
     arrays = [data_pd[i] for i in range(data_pd.shape[0])]
     data_pd = np.concatenate(arrays, axis=0)
     data_pd = data_pd[:, np.newaxis, :, :]
