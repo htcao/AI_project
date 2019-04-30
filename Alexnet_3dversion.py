@@ -16,8 +16,6 @@ import os
 
 
 class Alexnet(nn.Module):
-    # Since the shape of image in CIFAR10 is 32x32x3, much smaller than 224x224x3, 
-    # the number of channels and hidden units are decreased compared to the architecture in paper
     def __init__(self):
         super(Alexnet, self).__init__()
         self.features = nn.Sequential(
@@ -102,36 +100,6 @@ def train(trainloader, net, criterion, optimizer, device):
 
     # load best model weights
     net.load_state_dict(best_model_wts)
-#def train(trainloader, net, criterion, optimizer, device):
-#    for epoch in range(10):  # loop over the dataset multiple times
-#        start = time.time()
-#        running_loss = 0.0
-#        correct = 0
-#        total = 0
-#        for i, (images, labels) in enumerate(trainloader):
-#            images = images.to(device)
-#            labels = labels.view(-1, 1).to(device)
-#            # TODO: zero the parameter gradients
-#            # TODO: forward pass
-#            # TODO: backward pass
-#            # TODO: optimize the network
-#            optimizer.zero_grad()
-#            outputs = net(images)
-#            loss = criterion(outputs, labels)
-#            loss.backward()
-#            optimizer.step()
-#            # print statistics
-#            running_loss += loss.item()
-#            predicted = (outputs.data > 0).float()
-#            total += labels.size(0)
-#            correct += (predicted == labels).sum().item()
-#            if i % 5 == 4:    # print every 5 mini-batches
-#                end = time.time()
-#                print('[epoch %d, iter %5d] loss: %.3f training accuracy: %.2f %% eplased time %.3f' %
-#                      (epoch + 1, i + 1, running_loss / 5 / labels.size(0), 100 * correct / total, end-start))
-#                start = time.time()
-#                running_loss = 0.0
-#    print('Finished Training')
 
 
 def test(testloader, net, device):

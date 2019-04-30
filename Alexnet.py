@@ -16,8 +16,6 @@ import os
 
 
 class Alexnet(nn.Module):
-    # Since the shape of image in CIFAR10 is 32x32x3, much smaller than 224x224x3, 
-    # the number of channels and hidden units are decreased compared to the architecture in paper
     def __init__(self):
         super(Alexnet, self).__init__()
         self.features = nn.Sequential(
@@ -187,11 +185,11 @@ def main():
     if save_flag:
         torch.save(net.state_dict(), './weights/alexnet_weight_svm.pt')
 #    conv5_weights = net.state_dict()['features.12.weight'].cpu()
-#    image_weight = conv5_weights[0,:,:,:].numpy()
-#    image_weight = np.maximum(image_weight, 0)
-#    image_weight = np.mean(image_weight, axis=0)
-#    image_weight = (image_weight-np.min(image_weight))/(np.max(image_weight)-np.min(image_weight))
-#    plt.imshow(image_weight)
+# #    image_weight = conv5_weights[0,:,:,:].numpy()
+# #    image_weight = np.maximum(image_weight, 0)
+# #    image_weight = np.mean(image_weight, axis=0)
+# #    image_weight = (image_weight-np.min(image_weight))/(np.max(image_weight)-np.min(image_weight))
+# #    plt.imshow(image_weight)
 
 if __name__ == "__main__":
     main()

@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Apr 16 13:49:58 2019
-
-@author: hangting
-"""
 import torch
 from torch.autograd import Variable
 from torch.autograd import Function

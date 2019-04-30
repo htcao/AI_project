@@ -20,10 +20,6 @@ def train(trainloader, net, criterion, optimizer, device):
         for i, (images, labels) in enumerate(trainloader):
             images = images.to(device)
             labels = labels.view(-1, 1).to(device)
-            # TODO: zero the parameter gradients
-            # TODO: forward pass
-            # TODO: backward pass
-            # TODO: optimize the network
             optimizer.zero_grad()
             outputs = net(images)
             loss = criterion(outputs, labels)
